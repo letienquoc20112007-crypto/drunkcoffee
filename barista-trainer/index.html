@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Barista Recipe Trainer – Ứng dụng game học pha chế chuyên nghiệp, giúp bartender ghi nhớ công thức qua trò chơi tương tác." />
+  <meta name="keywords" content="barista, recipe, trainer, bartender, pha chế, học pha chế, coffee, cocktail" />
+  <title>☕ Barista Recipe Trainer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ========== OVERLAY LOADING ========== -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loader-content">
+      <div class="coffee-loader">
+        <div class="cup">☕</div>
+        <div class="steam">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+      <p class="loader-text">Đang pha chế...</p>
+    </div>
+  </div>
+
+  <!-- ========== CONFETTI CONTAINER ========== -->
+  <div id="confetti-container" class="confetti-container"></div>
+
+  <!-- ========== TOAST NOTIFICATION ========== -->
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <!-- ========== MODAL THÊM/SỬA CÔNG THỨC ========== -->
+  <div id="recipe-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 id="modal-title">✨ Thêm Công Thức Mới</h2>
+        <button class="modal-close" id="modal-close-btn" aria-label="Đóng modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="recipe-name">Tên Món *</label>
+          <input type="text" id="recipe-name" placeholder="VD: Caramel Macchiato" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label for="recipe-category">Danh Mục *</label>
+          <select id="recipe-category">
+            <option value="Coffee">☕ Coffee</option>
+            <option value="Tea">🍵 Tea</option>
+            <option value="Mocktail">🍹 Mocktail</option>
+            <option value="Smoothie">🥤 Smoothie</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nguyên Liệu *</label>
+          <div id="ingredients-list" class="dynamic-list"></div>
+          <button type="button" class="btn-add-item" id="add-ingredient-btn">
+            <span>+</span> Thêm nguyên liệu
+          </button>
+        </div>
+        <div class="form-group">
+          <label>Các Bước Thực Hiện *</label>
+          <div id="steps-list" class="dynamic-list"></div>
+          <button type="button" class="btn-add-item" id="add-step-btn">
+            <span>+</span> Thêm bước
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="modal-cancel-btn">Hủy</button>
+        <button type="button" class="btn-primary" id="modal-save-btn">💾 Lưu Công Thức</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL XEM CHI TIẾT CÔNG THỨC ========== -->
+  <div id="detail-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="detail-modal-title">
+    <div class="modal-box modal-box--wide">
+      <div class="modal-header">
+        <h2 id="detail-modal-title">Chi Tiết Công Thức</h2>
+        <button class="modal-close" id="detail-modal-close" aria-label="Đóng">✕</button>
+      </div>
+      <div class="modal-body" id="detail-modal-body">
+        <!-- Được render bởi JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MAIN LAYOUT ========== -->
+  <div class="app-layout">
+
+    <!-- Sidebar / Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <img class="brand-logo" src="assets/drunkcoffee-logo.png" alt="Drunkcoffee" />
+        <span class="brand-name">Drunkcoffee</span>
+      </div>
+
+      <nav class="sidebar-nav" role="navigation" aria-label="Điều hướng chính">
+        <button class="nav-item active" id="nav-dashboard" data-tab="dashboard" aria-selected="true">
+          <span class="nav-icon">📚</span>
+          <span class="nav-label">Thư Viện</span>
+        </button>
+        <button class="nav-item" id="nav-import" data-tab="import" aria-selected="false">
+          <span class="nav-icon">📁</span>
+          <span class="nav-label">Smart Import</span>
+        </button>
+        <button class="nav-item" id="nav-brewing" data-tab="brewing" aria-selected="false">
+          <span class="nav-icon">🍵</span>
+          <span class="nav-label">Ủ trà</span>
+        </button>
+        <button class="nav-item" id="nav-game1" data-tab="game1" aria-selected="false">
+          <span class="nav-icon">🎯</span>
+          <span class="nav-label">Select & Mix</span>
+          <span class="nav-badge">Dễ</span>
+        </button>
+        <button class="nav-item" id="nav-game2" data-tab="game2" aria-selected="false">
+          <span class="nav-icon">🧠</span>
+          <span class="nav-label">Recall & Type</span>
+          <span class="nav-badge nav-badge--hard">Khó</span>
+        </button>
+      </nav>
+
+      <!-- Bảng điểm -->
+      <div class="sidebar-score">
+        <div class="score-label">🏆 Điểm Tích Lũy</div>
+        <div class="score-value" id="sidebar-score-display">0</div>
+        <div class="score-streak" id="sidebar-streak">🔥 Chuỗi: 0</div>
+      </div>
+
+      <!-- Nút ẩn/hiện sidebar trên mobile -->
+      <button class="sidebar-toggle-close" id="sidebar-toggle-close" aria-label="Đóng menu">✕</button>
+    </aside>
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <button class="hamburger" id="hamburger-btn" aria-label="Mở menu">
+        <span></span><span></span><span></span>
+      </button>
+      <img class="mobile-brand-logo" src="assets/drunkcoffee-logo.png" alt="" />
+      <div class="mobile-brand">Drunkcoffee</div>
+      <div class="mobile-score">🏆 <span id="mobile-score">0</span></div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content" id="main-content">
+
+      <!-- ===== TAB 1: DASHBOARD / THƯ VIỆN ===== -->
+      <section class="tab-section active" id="tab-dashboard" aria-labelledby="nav-dashboard">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h1 class="section-title">Thư viện DrunkCoffee</h1>
+            <p class="section-subtitle">Quản lý và khám phá bộ sưu tập công thức pha chế của bạn</p>
+          </div>
+          <div class="section-actions-group">
+            <button class="btn-secondary" id="sync-recipes-btn" title="Đồng bộ lại công thức chuẩn từ menu gốc">
+              <span>🔄</span> Cập Nhật Menu Chuẩn
+            </button>
+            <button class="btn-primary" id="add-recipe-btn">
+              <span>+</span> Thêm Công Thức
+            </button>
+          </div>
+        </div>
+
+        <!-- Bộ lọc và tìm kiếm -->
+        <div class="filter-bar">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Tìm kiếm theo tên món hoặc nguyên liệu..." autocomplete="off" aria-label="Tìm kiếm công thức" />
+          </div>
+          <div class="category-filters" role="group" aria-label="Lọc theo danh mục">
+            <button class="filter-btn active" data-category="all" id="filter-all">✨ Tất Cả</button>
+            <button class="filter-btn" data-category="Coffee" id="filter-coffee">☕ Menu Cà Phê</button>
+            <button class="filter-btn" data-category="Tea" id="filter-tea">🍵 Menu Trà</button>
+            <button class="filter-btn" data-category="Other" id="filter-other">🍹 Khác</button>
+          </div>
+        </div>
+
+        <!-- Thống kê nhanh -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <span class="stat-icon">📖</span>
+            <div class="stat-info">
+              <span class="stat-number" id="stat-total">0</span>
+              <span class="stat-label">Công thức</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">☕</span>
+            <div class="stat-info">
+              <span class="stat-number" id="stat-coffee">0</span>
+              <span class="stat-label">Coffee</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">🍵</span>
+            <div class="stat-info">
+              <span class="stat-number" id="stat-tea">0</span>
+              <span class="stat-label">Tea</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon">🏆</span>
+            <div class="stat-info">
+              <span class="stat-number" id="stat-score">0</span>
+              <span class="stat-label">Điểm</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lưới công thức -->
+        <div class="recipes-grid" id="recipes-grid" role="list">
+          <!-- Được render bởi JavaScript -->
+        </div>
+
+        <!-- Trạng thái rỗng -->
+        <div class="empty-state" id="empty-state" style="display:none;">
+          <div class="empty-icon">☕</div>
+          <h3>Chưa có công thức nào</h3>
+          <p>Hãy thêm công thức đầu tiên hoặc import từ file PDF/ảnh!</p>
+          <button class="btn-primary" onclick="switchTab('import')">📁 Import Ngay</button>
+        </div>
+      </section>
+
+      <!-- ===== TAB 2: SMART IMPORT ===== -->
+      <section class="tab-section" id="tab-import" aria-labelledby="nav-import">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h1 class="section-title">📁 Smart Import</h1>
+            <p class="section-subtitle">Tải lên PDF hoặc ảnh để tự động bóc tách công thức pha chế</p>
+          </div>
+        </div>
+
+        <!-- Drop Zone -->
+        <div class="import-container">
+          <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Kéo thả file hoặc nhấp để chọn">
+            <div class="dropzone-content" id="dropzone-content">
+              <div class="dropzone-icon">📂</div>
+              <h3 class="dropzone-title">Kéo & Thả File Vào Đây</h3>
+              <p class="dropzone-subtitle">Hỗ trợ: PDF, PNG, JPG, JPEG</p>
+              <div class="dropzone-divider"><span>hoặc</span></div>
+              <button class="btn-primary" id="browse-btn" type="button">📎 Chọn File từ Máy</button>
+              <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" aria-label="Chọn file" />
+            </div>
+          </div>
+
+          <!-- Trạng thái xử lý -->
+          <div class="processing-status" id="processing-status" style="display:none;">
+            <div class="processing-animation">
+              <div class="processing-dots">
+                <span></span><span></span><span></span>
+              </div>
+              <p id="processing-text">Đang phân tích tài liệu...</p>
+            </div>
+            <div class="processing-steps" id="processing-steps"></div>
+          </div>
+
+          <!-- Bảng xem trước kết quả bóc tách -->
+          <div class="extraction-preview" id="extraction-preview" style="display:none;">
+            <div class="preview-header">
+              <h3>🔍 Kết Quả Bóc Tách</h3>
+              <p class="preview-hint">Kiểm tra và chỉnh sửa trước khi lưu</p>
+            </div>
+            <div class="preview-form" id="preview-form">
+              <!-- Được render bởi JS -->
+            </div>
+            <div class="preview-actions">
+              <button class="btn-secondary" id="cancel-import-btn">✕ Hủy</button>
+              <button class="btn-primary" id="confirm-import-btn">✅ Xác Nhận & Lưu Vào Hệ Thống</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lịch sử import -->
+        <div class="import-history" id="import-history">
+          <h3>📋 Lịch Sử Import</h3>
+          <div id="history-list" class="history-list"></div>
+        </div>
+      </section>
+
+      <!-- ===== TAB 3: TEA BREWING RECIPES ===== -->
+      <section class="tab-section" id="tab-brewing" aria-labelledby="nav-brewing">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h1 class="section-title">🍵 Công Thức Ủ Trà</h1>
+            <p class="section-subtitle">Lưu và tra cứu định lượng, nhiệt độ, thời gian ủ theo công thức của quán</p>
+          </div>
+        </div>
+
+        <div class="brewing-layout">
+          <section class="brewing-settings" id="brewing-settings-form" aria-label="Thêm công thức ủ trà">
+            <h2 id="brewing-form-title">Thêm công thức ủ trà</h2>
+            <div class="form-group">
+              <label for="brewing-name">Tên công thức *</label>
+              <input type="text" id="brewing-name" maxlength="100" placeholder="Ví dụ: Ủ trà lài" />
+            </div>
+            <div class="brewing-inputs">
+              <div class="form-group">
+                <label for="brewing-tea-type">Loại trà *</label>
+                <input type="text" id="brewing-tea-type" maxlength="100" placeholder="Ví dụ: Trà lài" />
+              </div>
+              <div class="form-group">
+                <label for="brewing-tea-amount">Lượng trà (g) *</label>
+                <input type="number" id="brewing-tea-amount" min="0.1" step="0.1" placeholder="g" />
+              </div>
+              <div class="form-group">
+                <label for="brewing-water-amount">Lượng nước (ml) *</label>
+                <input type="number" id="brewing-water-amount" min="1" step="1" placeholder="ml" />
+              </div>
+              <div class="form-group">
+                <label for="brewing-temperature">Nhiệt độ nước (°C) *</label>
+                <input type="number" id="brewing-temperature" min="1" max="100" step="1" placeholder="°C" />
+              </div>
+              <div class="form-group">
+                <label for="brewing-minutes">Thời gian ủ (phút) *</label>
+                <input type="number" id="brewing-minutes" min="0" max="1440" step="1" value="3" />
+              </div>
+              <div class="form-group">
+                <label for="brewing-seconds">Thời gian ủ (giây)</label>
+                <input type="number" id="brewing-seconds" min="0" max="59" step="1" value="0" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="brewing-steps">Các bước ủ trà</label>
+              <textarea id="brewing-steps" rows="4" placeholder="Mỗi bước viết trên một dòng"></textarea>
+            </div>
+            <div class="brewing-form-actions">
+              <button class="btn-primary" id="brewing-save-btn" type="button">💾 Lưu công thức</button>
+              <button class="btn-secondary" id="brewing-cancel-edit-btn" type="button" hidden>Hủy sửa</button>
+            </div>
+          </section>
+
+          <section class="brewing-timer-card" aria-label="Đồng hồ ủ trà">
+            <div class="brewing-tea-icon" aria-hidden="true">🫖</div>
+            <h2 id="brewing-selected-name">Chọn công thức để bắt đầu</h2>
+            <p class="brewing-status" id="brewing-selected-details">Chọn một công thức bên dưới để xem tỉ lệ trà, nước và nhiệt độ.</p>
+            <p class="brewing-timer-label">Thời gian còn lại</p>
+            <div class="brewing-countdown" id="brewing-countdown" role="timer" aria-live="off">00:00</div>
+            <p class="brewing-status" id="brewing-status" role="status" aria-live="polite">Sẵn sàng ủ trà</p>
+            <div class="brewing-actions">
+              <button class="btn-primary" id="brewing-start-btn" type="button" disabled>▶ Bắt đầu ủ</button>
+              <button class="btn-secondary" id="brewing-pause-btn" type="button" disabled>⏸ Tạm dừng</button>
+              <button class="btn-secondary" id="brewing-reset-btn" type="button">↺ Đặt lại</button>
+            </div>
+          </section>
+
+          <section class="brewing-recipes-section" aria-label="Danh sách công thức ủ trà">
+            <div class="brewing-recipes-heading">
+              <div>
+                <h2>Công thức đã lưu</h2>
+                <p>Chọn công thức để xem hướng dẫn và bắt đầu canh giờ ủ.</p>
+              </div>
+              <span class="brewing-recipe-count" id="brewing-recipe-count">0 công thức</span>
+            </div>
+            <div class="brewing-recipes-list" id="brewing-recipes-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ===== TAB 4: GAME 1 – SELECT & MIX ===== -->
+      <section class="tab-section" id="tab-game1" aria-labelledby="nav-game1">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h1 class="section-title">🎯 Select & Mix</h1>
+            <p class="section-subtitle">Chọn đúng nguyên liệu để pha chế món đồ uống được yêu cầu</p>
+          </div>
+          <div class="game-score-display">
+            🏆 <span id="game1-score">0</span> điểm
+          </div>
+        </div>
+
+        <!-- Game 1 Arena -->
+        <div class="game-arena" id="game1-arena">
+          <!-- Màn hình Start -->
+          <div class="game-screen game-screen--start" id="game1-start">
+            <div class="game-start-content">
+              <div class="game-icon-big">🎯</div>
+              <h2>Chế Độ: Chọn Nguyên Liệu</h2>
+              <p>Hệ thống sẽ đưa ra tên món. Bạn phải chọn đúng các nguyên liệu từ danh sách.</p>
+              <ul class="game-rules">
+                <li>✅ Chọn đúng 100% → Cộng <strong>10 điểm</strong></li>
+                <li>⚠️ Chọn sai → Trừ <strong>3 điểm</strong></li>
+                <li>💡 Tối đa <strong>2 lần gợi ý</strong> mỗi lượt</li>
+              </ul>
+              <div class="game-scope-selector">
+                <span class="game-scope-label">🎯 Chọn nhóm đồ uống để luyện tập:</span>
+                <div class="game-scope-pills" id="game1-scope-pills">
+                  <button type="button" class="scope-pill active" data-scope="all">✨ Tất Cả</button>
+                  <button type="button" class="scope-pill" data-scope="Coffee">☕ Menu Cà Phê</button>
+                  <button type="button" class="scope-pill" data-scope="Tea">🍵 Menu Trà</button>
+                </div>
+              </div>
+              <button class="btn-game-start" id="game1-start-btn">🚀 Bắt Đầu Chơi</button>
+            </div>
+          </div>
+
+          <!-- Màn hình chơi -->
+          <div class="game-screen" id="game1-play" style="display:none;">
+            <!-- Tiêu đề thử thách -->
+            <div class="challenge-header">
+              <div class="challenge-badge">THÁCH THỨC</div>
+              <h2 class="challenge-name" id="game1-challenge-name">Cappuccino</h2>
+              <div class="challenge-category" id="game1-challenge-category">☕ Coffee</div>
+            </div>
+
+            <!-- Thanh gợi ý -->
+            <div class="hint-bar">
+              <button class="btn-hint" id="game1-hint-btn">
+                💡 Gợi Ý <span class="hint-count" id="game1-hint-count">(2 lần còn lại)</span>
+              </button>
+              <div class="hint-display" id="game1-hint-display"></div>
+            </div>
+
+            <!-- Lưới nguyên liệu -->
+            <div class="ingredients-instruction">
+              <p>🧪 Chọn các nguyên liệu cần thiết để pha chế món này:</p>
+            </div>
+            <div class="ingredients-grid" id="game1-ingredients-grid" role="group" aria-label="Danh sách nguyên liệu">
+              <!-- Được render bởi JS -->
+            </div>
+
+            <!-- Khu vực "Ly pha chế" - hiển thị đã chọn -->
+            <div class="selected-ingredients-tray">
+              <h4>🥂 Nguyên liệu đã chọn:</h4>
+              <div class="selected-list" id="game1-selected-list">
+                <span class="selected-empty">Chưa chọn nguyên liệu nào...</span>
+              </div>
+            </div>
+
+            <!-- Hành động -->
+            <div class="game-actions">
+              <button class="btn-secondary" id="game1-skip-btn">⏭ Bỏ qua</button>
+              <button class="btn-game-submit" id="game1-submit-btn">🍹 Pha Chế Ngay!</button>
+            </div>
+          </div>
+
+          <!-- Màn hình kết quả -->
+          <div class="game-screen" id="game1-result" style="display:none;">
+            <div class="result-content" id="game1-result-content">
+              <!-- Được render bởi JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== TAB 4: GAME 2 – RECALL & TYPE ===== -->
+      <section class="tab-section" id="tab-game2" aria-labelledby="nav-game2">
+        <div class="section-header">
+          <div class="section-title-group">
+            <h1 class="section-title">🧠 Recall & Type</h1>
+            <p class="section-subtitle">Thử thách cao cấp: Tự nhớ và gõ đầy đủ công thức pha chế</p>
+          </div>
+          <div class="game-score-display">
+            🏆 <span id="game2-score">0</span> điểm
+          </div>
+        </div>
+
+        <!-- Game 2 Arena -->
+        <div class="game-arena" id="game2-arena">
+          <!-- Màn hình Start -->
+          <div class="game-screen game-screen--start" id="game2-start">
+            <div class="game-start-content">
+              <div class="game-icon-big">🧠</div>
+              <h2>Chế Độ: Nhớ & Gõ Công Thức</h2>
+              <p>Chỉ hiển thị tên món. Bạn phải tự nhớ và điền đầy đủ nguyên liệu + định lượng.</p>
+              <ul class="game-rules">
+                <li>✅ Đúng 100% → Cộng <strong>20 điểm</strong></li>
+                <li>⚠️ Đúng một phần → Cộng điểm tương ứng</li>
+                <li>💡 Tối đa <strong>2 lần gợi ý</strong> mỗi lượt</li>
+              </ul>
+              <div class="game-scope-selector">
+                <span class="game-scope-label">🧠 Chọn nhóm đồ uống để thử thách:</span>
+                <div class="game-scope-pills" id="game2-scope-pills">
+                  <button type="button" class="scope-pill active" data-scope="all">✨ Tất Cả</button>
+                  <button type="button" class="scope-pill" data-scope="Coffee">☕ Menu Cà Phê</button>
+                  <button type="button" class="scope-pill" data-scope="Tea">🍵 Menu Trà</button>
+                </div>
+              </div>
+              <button class="btn-game-start" id="game2-start-btn">🚀 Bắt Đầu Thử Thách</button>
+            </div>
+          </div>
+
+          <!-- Màn hình chơi -->
+          <div class="game-screen" id="game2-play" style="display:none;">
+            <!-- Tiêu đề thử thách -->
+            <div class="challenge-header">
+              <div class="challenge-badge challenge-badge--hard">THÁCH THỨC KHÓ</div>
+              <h2 class="challenge-name" id="game2-challenge-name">Cappuccino</h2>
+              <div class="challenge-category" id="game2-challenge-category">☕ Coffee</div>
+            </div>
+
+            <!-- Thanh gợi ý -->
+            <div class="hint-bar">
+              <button class="btn-hint" id="game2-hint-btn">
+                💡 Gợi Ý <span class="hint-count" id="game2-hint-count">(2 lần còn lại)</span>
+              </button>
+              <div class="hint-display" id="game2-hint-display"></div>
+            </div>
+
+            <!-- Form điền nguyên liệu -->
+            <div class="recall-form-section">
+              <p class="recall-instruction">🖊️ Điền đầy đủ <strong>nguyên liệu</strong> và <strong>định lượng</strong> để pha chế món này:</p>
+              <div class="recall-inputs" id="game2-recall-inputs">
+                <!-- Được render bởi JS -->
+              </div>
+              <button class="btn-add-item" id="game2-add-row-btn" type="button">
+                <span>+</span> Thêm Thành Phần
+              </button>
+            </div>
+
+            <!-- Hành động -->
+            <div class="game-actions">
+              <button class="btn-secondary" id="game2-skip-btn">⏭ Bỏ qua</button>
+              <button class="btn-game-submit" id="game2-submit-btn">🔬 Kiểm Tra Công Thức</button>
+            </div>
+          </div>
+
+          <!-- Màn hình kết quả -->
+          <div class="game-screen" id="game2-result" style="display:none;">
+            <div class="result-content" id="game2-result-content">
+              <!-- Được render bởi JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ========== BACKDROP cho mobile sidebar ========== -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
